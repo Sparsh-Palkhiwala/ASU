@@ -164,14 +164,26 @@ def breadthFirstSearch(problem):
     
     return []
 
-
-    return genericSearch(problem, fringe)
-
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
     fringe = util.PriorityQueue()
-    return genericSearch(problem, fringe)
+    visited = set()
+    fringe.push((problem.getStartState(),[],0),0)
+    while not fringe.isEmpty():
+        state,actions,cost = fringe.pop()
+
+        if problem.isGoalState(state):
+            return actions
+        
+        if state not in visited:
+            visited.add(state)
+            successors = problem.getSuccessors(state)
+            for successor_state,action,successor_cost in successors:
+                new_actions = actions + [action]
+                new_cost = cost + successor_cost
+                fringe.push((successor_state, new_actions, new_cost),new_cost)
+    return []
     
 
 def nullHeuristic(state, problem=None):
@@ -185,9 +197,24 @@ def nullHeuristic(state, problem=None):
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    fringe = util.PriorityQueue() 
-    return genericSearch(problem, fringe)
+    fringe = util.PriorityQueue()
+    visited = set()
+    fringe.push((problem.getStartState(),[],0),0)
+    while not fringe.isEmpty():
+        state,actions,cost = fringe.pop()
 
+        if problem.isGoalState(state):
+            return actions
+        
+        if state not in visited:
+            visited.add(state)
+            successors = problem.getSuccessors(state)
+            for successor_state,action,successor_cost in successors:
+                new_action = actions + [action]
+                new_cost = cost + successor_cost
+                heuristic_value = heuristic(successor_state,problem)
+                new_priority = new_cost + heuristic_value
+                fringe.push((successor_state,new_action,new_cost),new_priority)
 
 # Abbreviations
 bfs = breadthFirstSearch
