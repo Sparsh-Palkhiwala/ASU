@@ -523,7 +523,7 @@ class ClosestDotSearchAgent(SearchAgent):
         problem = AnyFoodSearchProblem(gameState)
 
         "*** YOUR CODE HERE ***"
-        actions = search.ucs(problem)  # Use A* search to find the path
+        actions = search.ucs(problem)  # Can use any search other than DFS
 
         if actions:
             return actions
