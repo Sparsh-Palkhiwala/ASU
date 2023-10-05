@@ -139,29 +139,63 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
     def getAction(self, gameState):
         """
-        Returns the minimax action from the current gameState using self.depth
-        and self.evaluationFunction.
+          Returns the minimax action from the current gameState using self.depth
+          and self.evaluationFunction.
 
-        Here are some method calls that might be useful when implementing minimax.
+          Here are some method calls that might be useful when implementing minimax.
 
-        gameState.getLegalActions(agentIndex):
-        Returns a list of legal actions for an agent
-        agentIndex=0 means Pacman, ghosts are >= 1
+          gameState.getLegalActions(agentIndex):
+            Returns a list of legal actions for an agent
+            agentIndex=0 means Pacman, ghosts are >= 1
 
-        gameState.generateSuccessor(agentIndex, action):
-        Returns the successor game state after an agent takes an action
+          gameState.generateSuccessor(agentIndex, action):
+            Returns the successor game state after an agent takes an action
 
-        gameState.getNumAgents():
-        Returns the total number of agents in the game
-
-        gameState.isWin():
-        Returns whether or not the game state is a winning state
-
-        gameState.isLose():
-        Returns whether or not the game state is a losing state
+          gameState.getNumAgents():
+            Returns the total number of agents in the game
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        legal = gameState.getLegalActions(0)    #Getting the alloweed moves for the pacman 
+        successors = [gameState.generateSuccessor(0, action) for action in legal]
+        Maxfunc = -float('inf')
+        goalIndex = 0
+        for x in range(len(successors)):
+            actionValue = self.value(successors[x], 1, 0)
+            if actionValue > Maxfunc:
+                Maxfunc = actionValue
+                goalIndex = x
+        
+        return legal[goalIndex]
+        
+    def Maxfunc(self, gameState, agentIndex, depth):        #Finding the MAX
+        legal = gameState.getLegalActions(agentIndex)
+        successors = [gameState.generateSuccessor(agentIndex, action) for action in legal]
+        x = -float('inf')
+        for successor in successors:
+            x = max(x, self.value(successor, 1, depth))
+        return x
+        
+    def Minfunc(self, gameState, agentIndex, depth):        #Finding the MIN
+        legal = gameState.getLegalActions(agentIndex)
+        successors = [gameState.generateSuccessor(agentIndex, action) for action in legal]
+        x = float('inf')
+        for successor in successors:
+            if agentIndex + 1 == gameState.getNumAgents():
+                x = min(x, self.value(successor, 0, depth + 1))
+            else:
+                x = min(x, self.value(successor, agentIndex + 1, depth))
+        return x
+        
+    def value(self, gameState, agentIndex, depth):
+        
+        #If the state is terminal --> return state utility
+        if depth == self.depth or gameState.isWin() or gameState.isLose():
+            return self.evaluationFunction(gameState)
+        #If it is Pacman's turn --> return MAX
+        if agentIndex == 0:
+            return self.Maxfunc(gameState, agentIndex, depth)
+        #If it is not Pacman's turn --> return MIN
+        if agentIndex > 0:
+            return self.Minfunc(gameState, agentIndex, depth)
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -172,7 +206,20 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
-        "*** YOUR CODE HERE ***"
+        alpha = -float('inf')
+        beta = float('inf')
+        legal = gameState.getLegalActions(0)
+        successors = [gameState.generateSuccessor(0, action) for action in legal]
+        Maxfunc = -float('inf')
+        goalIndex = 0
+        for x in range(len(successors)):
+            actionValue = self.value(successors[x], 1, 0, alpha, beta)
+            if actionValue > Maxfunc:
+                Maxfunc = actionValue
+                goalIndex = x
+                alpha = actionValue
+        
+        return legal[goalIndex]            
         util.raiseNotDefined()
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
