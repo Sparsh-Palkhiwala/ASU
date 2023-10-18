@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-#
+# 
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -14,14 +14,13 @@
 
 import testClasses
 import random, math, traceback, sys, os
-import layout, textDisplay, graphicsDisplay, pacman, gridworld
+import layout, textDisplay, pacman, gridworld
 import time
 from util import Counter, TimeoutFunction, FixedRandom, Experiences
 from collections import defaultdict
 from pprint import PrettyPrinter
 from hashlib import sha1
 from functools import reduce
-from pacman import runGames, loadAgent
 pp = PrettyPrinter()
 VERBOSE = False
 
@@ -195,6 +194,59 @@ class ValueIterationTest(testClasses.TestCase):
     def parsePrettyValues(self, pretty):
         values = pretty.split()
         return values
+
+
+class AsynchronousValueIterationTest(ValueIterationTest):
+    def runAgent(self, moduleDict, numIterations):
+        agent = moduleDict['valueIterationAgents'].AsynchronousValueIterationAgent(self.grid, discount=self.discount, iterations=numIterations)
+        states = self.grid.getStates()
+        actions = list(reduce(lambda a, b: set(a).union(b), [self.grid.getPossibleActions(state) for state in states]))
+        values = {}
+        qValues = {}
+        policy = {}
+        for state in states:
+            values[state] = agent.getValue(state)
+            policy[state] = agent.computeActionFromValues(state)
+            possibleActions = self.grid.getPossibleActions(state)
+            for action in actions:
+                if action not in qValues:
+                    qValues[action] = {}
+                if action in possibleActions:
+                    qValues[action][state] = agent.computeQValueFromValues(state, action)
+                else:
+                    qValues[action][state] = None
+        valuesPretty = self.prettyValues(values)
+        policyPretty = self.prettyPolicy(policy)
+        qValuesPretty = {}
+        for action in actions:
+            qValuesPretty[action] = self.prettyValues(qValues[action])
+        return (valuesPretty, qValuesPretty, actions, policyPretty)
+
+class PrioritizedSweepingValueIterationTest(ValueIterationTest):
+    def runAgent(self, moduleDict, numIterations):
+        agent = moduleDict['valueIterationAgents'].PrioritizedSweepingValueIterationAgent(self.grid, discount=self.discount, iterations=numIterations)
+        states = self.grid.getStates()
+        actions = list(reduce(lambda a, b: set(a).union(b), [self.grid.getPossibleActions(state) for state in states]))
+        values = {}
+        qValues = {}
+        policy = {}
+        for state in states:
+            values[state] = agent.getValue(state)
+            policy[state] = agent.computeActionFromValues(state)
+            possibleActions = self.grid.getPossibleActions(state)
+            for action in actions:
+                if action not in qValues:
+                    qValues[action] = {}
+                if action in possibleActions:
+                    qValues[action][state] = agent.computeQValueFromValues(state, action)
+                else:
+                    qValues[action][state] = None
+        valuesPretty = self.prettyValues(values)
+        policyPretty = self.prettyPolicy(policy)
+        qValuesPretty = {}
+        for action in actions:
+            qValuesPretty[action] = self.prettyValues(qValues[action])
+        return (valuesPretty, qValuesPretty, actions, policyPretty)
 
 class ApproximateQLearningTest(testClasses.TestCase):
 
@@ -462,8 +514,6 @@ class QLearningTest(testClasses.TestCase):
 
     def runAgent(self, moduleDict, numExperiences):
         agent = moduleDict['qlearningAgents'].QLearningAgent(**self.opts)
-        # self.grid = gridworld.getCliffGrid()
-        # agent = moduleDict['qlearningAgents'].LearnedQAgent(self.grid)
         states = [state for state in self.grid.getStates() if len(self.grid.getPossibleActions(state)) > 0]
         states.sort()
         lastExperience = None
@@ -485,7 +535,6 @@ class QLearningTest(testClasses.TestCase):
                     qValues[action][state] = agent.getQValue(state, action)
                 else:
                     qValues[action][state] = None
-        # print(agent.getQValue([0,0], "exit"))
         valuesPretty = self.prettyValues(values)
         policyPretty = self.prettyPolicy(policy)
         qValuesPretty = {}
@@ -609,6 +658,31 @@ class EpsilonGreedyTest(testClasses.TestCase):
                 self.addMessage("Epsilon-greedy action selection is not correct.")
                 self.addMessage("Actual epsilon = %f; student empirical epsilon = %f; error = %f > tolerance = %f" % (self.epsilon, empiricalEpsilon, error, tolerance))
                 return False
+        return True
+
+
+### q8
+class Question8Test(testClasses.TestCase):
+
+    def __init__(self, question, testDict):
+        super(Question8Test, self).__init__(question, testDict)
+
+    def execute(self, grades, moduleDict, solutionDict):
+        studentSolution = moduleDict['analysis'].question8()
+        studentSolution = str(studentSolution).strip().lower()
+        hashedSolution = sha1(studentSolution.encode('utf-8')).hexdigest()
+        if hashedSolution == '46729c96bb1e4081fdc81a8ff74b3e5db8fba415':
+            return self.testPass(grades)
+        else:
+            self.addMessage("Solution is not correct.")
+            self.addMessage("   Student solution: %s" % (studentSolution,))
+            return self.testFail(grades)
+
+    def writeSolution(self, moduleDict, filePath):
+        handle = open(filePath, 'w')
+        handle.write('# This is the solution file for %s.\n' % self.path)
+        handle.write('# File intentionally blank.\n')
+        handle.close()
         return True
 
 
@@ -902,3 +976,4 @@ class GridPolicyTest(testClasses.TestCase):
             handle.write('# This is the solution file for %s.\n' % self.path)
             handle.write('# File intentionally blank.\n')
         return True
+
