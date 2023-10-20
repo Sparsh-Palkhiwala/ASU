@@ -158,17 +158,17 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
 
     def runValueIteration(self):
         "*** YOUR CODE HERE ***"
-        for iter in range(self.iterations):
-            newValues = util.Counter() # new counter for the new values
-            for state in self.states:
-                if not self.mdp.isTerminal(state):      #to check whether it isnt a terminal state
-                    qValues = []
-                    actions = self.mdp.getPossibleActions(state)    #getting them actions for us to move
-                    for action in actions:
-                        qValues.append(self.computeQValueFromValues(state,action))      #append the values of the next states
-                        newValues[state] = max(qValues)         #finding the max 
-            self.values = newValues
-            iter = iter + 1
+        for iteration in range(self.iterations):
+            state = self.states[iteration % len(self.states)]
+            if not self.mdp.isTerminal(state):
+                # Initialize the value of the state to a low value
+                newValue = -float('inf')
+                # Calculate the new value for the state (state)
+                for action in self.mdp.getPossibleActions(state):
+                    qValue = self.computeQValueFromValues(state, action)
+                    newValue = max(newValue, qValue)
+                # Update self.values[state] with the new value
+                self.values[state] = newValue
 
 class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
     """
