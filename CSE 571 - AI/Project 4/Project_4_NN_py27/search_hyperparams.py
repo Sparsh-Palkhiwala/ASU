@@ -46,7 +46,6 @@ def search_hyperparams(train_data, train_labels, val_data, val_labels,
         if len(hyperparam) != len(hyperparams[0]):
             raise ValueError('The hyperparameter lists need to be equal in length')
     hyperparams = zip(*hyperparams)
-    # python *+VARIABLE: http://stackoverflow.com/questions/11315010/what-do-and-before-a-variable-name-mean-in-a-function-signature
 
     # Initialize the models
     models = []
@@ -61,9 +60,19 @@ def search_hyperparams(train_data, train_labels, val_data, val_labels,
             model.set_param_values(init_param_values)
         models.append(model)
 
-    val_accuracies = []
     # Loop over hyperparams
+    best_hyperparams = None
+    index = 1
+    best_model = None
+    max_accuracy = float("-inf")
     for model, (learning_rate, momentum, batch_size) in zip(models, hyperparams):
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        solver = solvers.MinibatchStochasticGradientDescentSolver(learning_rate, iterations, batch_size, momentum)
+        train_losses, val_losses = solver.solve(train_data, train_labels, val_data, val_labels, model)
+        accuracy = model.accuracy(val_data, val_labels)
+        if accuracy > max_accuracy:
+            max_accuracy = accuracy
+            best_model = model
+            best_hyperparams = index
+        index += 1
     return best_model, best_hyperparams
