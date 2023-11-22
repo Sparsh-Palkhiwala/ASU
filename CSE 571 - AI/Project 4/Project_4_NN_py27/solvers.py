@@ -68,17 +68,19 @@ class GradientDescentSolver(Solver):
 
     def get_updates_without_momentum(self, loss_tensor, param_vars):
         grad_tensors = tf.gradients(loss_tensor, param_vars)
-        vel_vars = [tf.Variable(np.zeros(param_var.get_shape(), dtype=np.float32)) for param_var in param_vars]
-
-        # Initialize velocity variables
-        tf.compat.v1.get_default_session().run([vel_var.initializer for vel_var in vel_vars])
-
+        vel_vars = [tf.Variable(np.zeros(param_var.get_shape(), dtype=np.float32), trainable=False) for param_var in param_vars]
+        vel_init_ops = [vel_var.initializer for vel_var in vel_vars]
+        tf.compat.v1.get_default_session().run(vel_init_ops)
         updates = []
-        for param_var, grad_tensor in zip(param_vars, grad_tensors):
-            vel_update = self.momentum * vel_var - self.learning_rate * grad_tensor
-            param_update = param_var + vel_update
-            updates.append((param_var, param_update))
-
+        for param_var, grad_tensor, vel_var in zip(param_vars, grad_tensors, vel_vars):
+            if self.momentum > 0:
+                new_velocity = self.momentum * vel_var - self.learning_rate * grad_tensor
+                new_param_var = param_var - self.learning_rate * (new_velocity + self.momentum * vel_var)
+                vel_var.assign(new_velocity)
+            else:
+                new_param_var = param_var - self.learning_rate * grad_tensor
+                vel_var.assign(grad_tensor)
+            updates.append((param_var, new_param_var))
         return updates
     
     def get_updates_with_momentum(self, loss_tensor, param_vars):
@@ -99,17 +101,22 @@ class GradientDescentSolver(Solver):
         self.learning_rate and self.momentum.
         """
         grad_tensors = tf.gradients(loss_tensor, param_vars)
-        vel_vars = [tf.Variable(np.zeros(param_var.get_shape(), dtype=np.float32)) for param_var in param_vars]
+        vel_vars = [tf.Variable(np.zeros(param_var.get_shape(), dtype=np.float32), trainable=False) for param_var in param_vars]
         tfu.get_session().run([vel_var.initializer for vel_var in vel_vars])
         updates = []
-        "*** YOUR CODE HERE ***"
-        for i in range(len(param_vars)):
-            new_vel = self.momentum * vel_vars[i] - self.learning_rate * grad_tensors[i]
-            updates.append((vel_vars[i], new_vel))
-            new_tensor = param_vars[i] + new_vel
-            updates.append((param_vars[i], new_tensor))
-        return updates
 
+        for i in range(len(param_vars)):
+            # Update velocity
+            vel_var = vel_vars[i]
+            new_velocity = self.momentum * vel_var - self.learning_rate * grad_tensors[i]
+            updates.append((vel_var, new_velocity))
+
+            # Update parameter using new velocity
+            param_var = param_vars[i]
+            new_param_var = param_var + new_velocity
+            updates.append((param_var, new_param_var))
+
+        return updates
 
     def get_loss_tensor(self, prediction_tensor, target_ph, param_vars):
         loss_tensor = self.loss_function(prediction_tensor, target_ph)
@@ -182,7 +189,6 @@ class GradientDescentSolver(Solver):
             train_loss = session.run(loss_tensor, feed_dict = {model.input_ph: input_train_data, target_ph: target_train_data})
             session.run(update_ops, feed_dict = {model.input_ph: input_train_data, target_ph: target_train_data})
             val_loss = session.run(loss_tensor, feed_dict = {model.input_ph: input_val_data, target_ph: target_val_data})
-
             train_losses.append(train_loss)
             val_losses.append(val_loss)
             if callback is not None: callback(model)
@@ -269,29 +275,23 @@ class StochasticGradientDescentSolver(GradientDescentSolver):
         placeholders = [model.input_ph, target_ph]
         train_data = [input_train_data, target_train_data]
         val_data = [input_val_data, target_val_data]
-        # You may want to initialize some variables that are shared across iterations
-        "*** YOUR CODE HERE ***"
         train_gen = MinibatchIndefinitelyGenerator(train_data, 1, self.shuffle)
         val_gen = MinibatchIndefinitelyGenerator(val_data, 1, self.shuffle)
-
         loss_tensor = self.get_loss_tensor(model.prediction_tensor, target_ph, model.get_param_vars(regularizable=True))
         updates = self.get_updates(loss_tensor, model.get_param_vars(trainable=True))
         update_ops = [tf.assign(old_var, new_var_or_tensor) for (old_var, new_var_or_tensor) in updates]
         train_losses = []
         val_losses = []
         for iter_ in range(self.iterations):
-            "*** YOUR CODE HERE ***"
-            # train_loss should be the loss of this iteration using only the training data that was used for the updates
-            # val_loss should be the loss of this iteration using the same amount of data used for the updates, but using the validation data instead
             a, b = train_gen.next()
             train_loss = session.run(loss_tensor, feed_dict = {model.input_ph: a, target_ph: b})
             session.run(update_ops, feed_dict = {model.input_ph: a, target_ph: b})
             c, d = val_gen.next()
             val_loss = session.run(loss_tensor, feed_dict = {model.input_ph: c, target_ph: d})
-
             train_losses.append(train_loss)
             val_losses.append(val_loss)
-            if callback is not None: callback(model)
+            if callback is not None: 
+                callback(model)
             self.display_progress(iter_, train_losses, val_losses)
         return train_losses, val_losses
 
@@ -370,25 +370,20 @@ class MinibatchStochasticGradientDescentSolver(GradientDescentSolver):
         "*** YOUR CODE HERE ***"
         train_gen = MinibatchIndefinitelyGenerator(train_data, self.batch_size, self.shuffle)
         val_gen = MinibatchIndefinitelyGenerator(val_data, self.batch_size, self.shuffle)
-
         loss_tensor = self.get_loss_tensor(model.prediction_tensor, target_ph, model.get_param_vars(regularizable=True))
         updates = self.get_updates(loss_tensor, model.get_param_vars(trainable=True))
         update_ops = [tf.assign(old_var, new_var_or_tensor) for (old_var, new_var_or_tensor) in updates]
         train_losses = []
         val_losses = []
         for iter_ in range(self.iterations):
-            "*** YOUR CODE HERE ***"
             a, b = train_gen.next()
             train_loss = session.run(loss_tensor, feed_dict = {model.input_ph: a, target_ph: b})
             session.run(update_ops, feed_dict = {model.input_ph: a, target_ph: b})
             c, d = val_gen.next()
             val_loss = session.run(loss_tensor, feed_dict = {model.input_ph: c, target_ph: d})
-            
-            # train_loss should be the loss of this iteration using only the training data that was used for the updates
-            # val_loss should be the loss of this iteration using the same amount of data used for the updates, but using the validation data instead
             train_losses.append(train_loss)
             val_losses.append(val_loss)
-
-            if callback is not None: callback(model)
+            if callback is not None: 
+                callback(model)
             self.display_progress(iter_, train_losses, val_losses)
         return train_losses, val_losses
